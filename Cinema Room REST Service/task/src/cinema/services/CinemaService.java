@@ -1,27 +1,32 @@
 package cinema.services;
 
+import cinema.dto.ReturnedTicket;
+import cinema.dto.Seats;
+import cinema.dto.Statistic;
 import cinema.exceptions.CinemaException;
 import cinema.exceptions.CinemaPasswordException;
-import cinema.models.Cinema;
+import cinema.Cinema;
 import cinema.models.Seat;
 import cinema.models.Ticket;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 
-import java.util.Map;
-import java.util.Objects;
-import java.util.UUID;
+import java.util.*;
 
+@Service
 public class CinemaService {
   private final Cinema cinema;
 
+  @Autowired
   public CinemaService() {
     this.cinema = new Cinema();
   }
 
-  public Cinema getCinema() {
-    return cinema;
+  public Seats getSeats() {
+    return new Seats(cinema.getAvailableSeats(), cinema.getTotalRows(), cinema.getTotalColumns());
   }
 
-  public Ticket purchase(Seat seat) throws CinemaException {
+  public Optional<Ticket> purchase(Seat seat) throws CinemaException {
     Seat chosenSeat =
         cinema.getAvailableSeats().stream()
             .filter(s -> s.equals(seat))
@@ -35,11 +40,10 @@ public class CinemaService {
     cinema.getPurchasedTickets().add(new Ticket(UUID.randomUUID().toString(), chosenSeat));
     return cinema.getPurchasedTickets().stream()
         .filter(s -> s.getTicket().equals(chosenSeat))
-        .findAny()
-        .orElse(null);
+        .findAny();
   }
 
-  public Map<String, Seat> returned(Ticket returnedTicket) throws CinemaException {
+  public ReturnedTicket returned(Ticket returnedTicket) throws CinemaException {
     Ticket ticket =
         cinema.getPurchasedTickets().stream()
             .filter(s -> Objects.equals(s.getToken(), returnedTicket.getToken()))
@@ -47,10 +51,10 @@ public class CinemaService {
             .orElseThrow(() -> new CinemaException("Wrong token!"));
     ticket.getTicket().setAvailable(true);
     cinema.getPurchasedTickets().remove(ticket);
-    return Map.of("returned_ticket", ticket.getTicket());
+    return new ReturnedTicket(ticket.getTicket());
   }
 
-  public Map<String, Long> statistic(String password) throws CinemaException {
+  public Statistic statistic(String password) throws CinemaException {
     if (!Objects.equals(password, "super_secret")) {
       throw new CinemaPasswordException("The password is wrong!");
     }
@@ -60,13 +64,6 @@ public class CinemaService {
         cinema.getAvailableSeats().stream().filter(Seat::isAvailable).count();
     long numberOfPurchasedTickets =
         cinema.getAvailableSeats().stream().filter(s -> !s.isAvailable()).count();
-
-    return Map.of(
-        "current_income",
-        currentIncome,
-        "number_of_available_seats",
-        numberOfAvailableSeats,
-        "number_of_purchased_tickets",
-        numberOfPurchasedTickets);
+     return new Statistic(numberOfAvailableSeats, numberOfPurchasedTickets, currentIncome);
   }
 }

@@ -1,9 +1,13 @@
-package cinema.models;
+package cinema;
 
+import cinema.models.Seat;
+import cinema.models.Ticket;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import org.springframework.stereotype.Component;
 
 import java.util.*;
 
+@Component
 public class Cinema {
   private static final int TOTAL_ROWS = 9;
   private static final int TOTAL_COLUMNS = 9;
